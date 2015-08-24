@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Popular Movies</string>
+
+    <!-- Replace with the test API key -->
+    <string name="api_key">268f072fe64e8f327f6c4336be27a2f4</string>
+
+    <string name="action_settings">Settings</string>
+
+    <string name="title_activity_movie_details">MovieDetailsActivity</string>
+    <string name="no_internet">Unable to reach The Movie Database - please verify your internet connection and try again.</string>
+    <string name="title_movie_list">Movies</string>
+    <string name="title_movie_detail">Movie Detail</string>
+    <string name="sort_preference">Sort Movies</string>
+    <string name="sort_preference_key">movie_sort_order</string>
+    <string name="sort_preference_favorites">favorites</string>
+
+    <string name="mark_as_favorite">Mark as favorite</string>
+    <string name="unmark_as_favorite">Unmark as favorite</string>
+    <string name="no_favorites_selected">You have no favorite movies selected.  You can change your sort preference to find some favorites if you like.</string>
+</resources>
