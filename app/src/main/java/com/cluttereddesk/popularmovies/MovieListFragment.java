@@ -57,7 +57,7 @@ public class MovieListFragment extends Fragment {
      */
     private int mActivatedPosition = ListView.INVALID_POSITION;
 
-    private List<Movie> movies;
+    private List<Movie> movies = new ArrayList<Movie>();
     private GridView searchResults;
     private MovieSearchResultAdapter mMovieListAdapter;
     private MovieFavoritesCursorAdapter mFavoritesCursorAdapter;
@@ -121,28 +121,16 @@ public class MovieListFragment extends Fragment {
         searchResults = (GridView) fragView.findViewById(R.id.movie_search_results);
 
         mMovieListAdapter = new MovieSearchResultAdapter(getActivity(), R.layout.movie_grid_item, movies);
+
+        bindListAdapter(fragView);
+
         if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
             reloadMovies(fragView);
         }
         return fragView;
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-
-
-        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
-            reloadMovies(getView());
-        }
-
-
-    }
-
-    public void reloadMovies(View view) {
-        movies = new ArrayList<Movie>();
-        mProgressBar.setVisibility(View.VISIBLE);
-
+    private void bindListAdapter(View view) {
         mProgressBar = (ProgressBar) view.findViewById(R.id.search_progress_bar);
 
         searchResults = (GridView) view.findViewById(R.id.movie_search_results);
@@ -156,8 +144,6 @@ public class MovieListFragment extends Fragment {
                     null, // values for "where" clause
                     null  // sort order
             );
-
-            mProgressBar.setVisibility(View.GONE);
 
             if (cursor.getCount() == 0) {
                 Toast.makeText(getActivity(), getResources().getString(R.string.no_favorites_selected), Toast.LENGTH_SHORT).show();
@@ -195,6 +181,40 @@ public class MovieListFragment extends Fragment {
                     mCallbacks.onItemSelected(movie);
                 }
             });
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+
+        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
+
+            if (! currentSort.equals(sortPreference()))
+                bindListAdapter(getView());
+
+            reloadMovies(getView());
+        }
+
+
+    }
+
+    public void reloadMovies(View view) {
+        movies = new ArrayList<Movie>();
+        mProgressBar.setVisibility(View.VISIBLE);
+
+
+        if (getString(R.string.sort_preference_favorites).equals(sortPreference())) {
+            mFavoritesCursorAdapter.getCursor().requery();
+            mProgressBar.setVisibility(View.GONE);
+
+            if (mFavoritesCursorAdapter.getCursor().getCount() == 0) {
+                Toast.makeText(getActivity(), getResources().getString(R.string.no_favorites_selected), Toast.LENGTH_SHORT).show();
+            }
+
+            currentSort = sortPreference();
+        } else {
             if (isNetworkAvailable()) {
                 retrievePopularMovies();
                 currentSort = sortPreference();
