@@ -2,7 +2,6 @@ package com.cluttereddesk.popularmovies;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -25,6 +24,7 @@ import com.cluttereddesk.popularmovies.persistence.MovieContract;
 import com.cluttereddesk.popularmovies.servicetasks.FetchMoviesTask;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -43,6 +43,8 @@ public class MovieListFragment extends Fragment {
      * activated item position. Only used on tablets.
      */
     private static final String STATE_ACTIVATED_POSITION = "activated_position";
+    private static final String CURRENT_SORT = "current_sort";
+    private static final String CURRENT_MOVIES = "current_movies";
 
     /**
      * The fragment's current callback object, which is notified of list item
@@ -56,10 +58,12 @@ public class MovieListFragment extends Fragment {
     private int mActivatedPosition = ListView.INVALID_POSITION;
 
     private List<Movie> movies;
+    private GridView searchResults;
     private MovieSearchResultAdapter mMovieListAdapter;
     private MovieFavoritesCursorAdapter mFavoritesCursorAdapter;
 
     private ProgressBar mProgressBar;
+    private String currentSort;
 
     public AbsListView getListView() {
         return (GridView) getView().findViewById(R.id.movie_search_results);
@@ -97,16 +101,29 @@ public class MovieListFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) { //this is never non-null
+            Movie[] savedMovies = (Movie[]) savedInstanceState.getParcelableArray(CURRENT_MOVIES);
+            currentSort = savedInstanceState.getString(CURRENT_SORT);
 
-
-        mMovieListAdapter = new MovieSearchResultAdapter(getActivity(), R.layout.movie_grid_item, movies);
+            movies = new ArrayList<Movie>();
+            movies.addAll(Arrays.asList(savedMovies));
+        }
     }
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View fragView = inflater.inflate(R.layout.fragment_display_movie_posters, container, false);
 
+        mProgressBar = (ProgressBar) fragView.findViewById(R.id.search_progress_bar);
+
+        searchResults = (GridView) fragView.findViewById(R.id.movie_search_results);
+
+        mMovieListAdapter = new MovieSearchResultAdapter(getActivity(), R.layout.movie_grid_item, movies);
+        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
+            reloadMovies(fragView);
+        }
         return fragView;
     }
 
@@ -114,13 +131,21 @@ public class MovieListFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
-        mProgressBar = (ProgressBar) getView().findViewById(R.id.search_progress_bar);
+
+        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
+            reloadMovies(getView());
+        }
+
+
+    }
+
+    public void reloadMovies(View view) {
+        movies = new ArrayList<Movie>();
         mProgressBar.setVisibility(View.VISIBLE);
 
-        GridView searchResults = (GridView) getView().findViewById(R.id.movie_search_results);
+        mProgressBar = (ProgressBar) view.findViewById(R.id.search_progress_bar);
 
-        movies = new ArrayList<Movie>();
-
+        searchResults = (GridView) view.findViewById(R.id.movie_search_results);
         mMovieListAdapter = new MovieSearchResultAdapter(getActivity(), R.layout.movie_grid_item, movies);
 
         if (getString(R.string.sort_preference_favorites).equals(sortPreference())) {
@@ -159,13 +184,12 @@ public class MovieListFragment extends Fragment {
                 }
             });
 
-
+            currentSort = sortPreference();
         } else {
             searchResults.setAdapter(mMovieListAdapter);
             searchResults.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    Intent detailsIntent = new Intent(getActivity(), MovieDetailsActivity.class);
                     Movie movie = (Movie) mMovieListAdapter.getItem(position);
 
                     mCallbacks.onItemSelected(movie);
@@ -173,19 +197,17 @@ public class MovieListFragment extends Fragment {
             });
             if (isNetworkAvailable()) {
                 retrievePopularMovies();
+                currentSort = sortPreference();
             } else {
                 Toast.makeText(getActivity(), getResources().getString(R.string.no_internet), Toast.LENGTH_SHORT).show();
             }
 
         }
-
-
     }
 
-    private String sortPreference() {
-        String sort_pref = PreferenceManager.getDefaultSharedPreferences(this.getActivity()).getString(getString(R.string.sort_preference_key), "popularity.desc");
 
-        return sort_pref;
+    private String sortPreference() {
+        return PreferenceManager.getDefaultSharedPreferences(this.getActivity()).getString(getString(R.string.sort_preference_key), "popularity.desc");
     }
 
     private void retrievePopularMovies() {
@@ -233,11 +255,15 @@ public class MovieListFragment extends Fragment {
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
+
         if (mActivatedPosition != ListView.INVALID_POSITION) {
             // Serialize and persist the activated item position.
             outState.putInt(STATE_ACTIVATED_POSITION, mActivatedPosition);
         }
+        outState.putString(CURRENT_SORT, currentSort);
+        if (movies != null)
+            outState.putParcelableArray(CURRENT_MOVIES, movies.toArray(new Movie[movies.size()]));
+        super.onSaveInstanceState(outState);
     }
 
     /**
