@@ -44,14 +44,17 @@ public class FetchMoviesTask extends AsyncTask<String, Void, List<Movie>> {
 
     private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
-    private MovieSearchResultAdapter mMovieSearchAdapter;
+    private List<Movie> mMovies;
     private ProgressBar mProgressBar;
     private final Context mContext;
+    private MovieSearchResultAdapter mResultAdapter;
 
-    public FetchMoviesTask(Context context, MovieSearchResultAdapter movieSearchAdapter, ProgressBar progressBar) {
+    public FetchMoviesTask(Context context, MovieSearchResultAdapter resultAdapter, ProgressBar progressBar) {
         mContext = context;
-        mMovieSearchAdapter = movieSearchAdapter;
         mProgressBar = progressBar;
+        mMovies = new ArrayList<Movie>();
+        mResultAdapter = resultAdapter;
+
     }
 
     private boolean DEBUG = true;
@@ -182,12 +185,13 @@ public class FetchMoviesTask extends AsyncTask<String, Void, List<Movie>> {
 
     @Override
     protected void onPostExecute(List<Movie> result) {
-        if (result != null && mMovieSearchAdapter != null) {
-            mMovieSearchAdapter.clear();
+        if (result != null && mMovies != null) {
+            mMovies.clear();
             for (Movie movie : result) {
-                mMovieSearchAdapter.add(movie);
+                mResultAdapter.add(movie);
             }
             mProgressBar.setVisibility(View.GONE);
         }
+
     }
 }

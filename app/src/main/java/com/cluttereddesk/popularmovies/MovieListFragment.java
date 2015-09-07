@@ -57,7 +57,7 @@ public class MovieListFragment extends Fragment {
      */
     private int mActivatedPosition = ListView.INVALID_POSITION;
 
-    private List<Movie> movies = new ArrayList<Movie>();
+    private ArrayList<Movie> movies = new ArrayList<Movie>();
     private GridView searchResults;
     private MovieSearchResultAdapter mMovieListAdapter;
     private MovieFavoritesCursorAdapter mFavoritesCursorAdapter;
@@ -101,12 +101,14 @@ public class MovieListFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState != null) { //this is never non-null
-            Movie[] savedMovies = (Movie[]) savedInstanceState.getParcelableArray(CURRENT_MOVIES);
+        super.setRetainInstance(true);
+        if (savedInstanceState != null) {
+            movies = savedInstanceState.getParcelableArrayList(CURRENT_MOVIES);
+            if (mMovieListAdapter != null) {
+                mMovieListAdapter.clear();
+                mMovieListAdapter.addAll(movies);
+            }
             currentSort = savedInstanceState.getString(CURRENT_SORT);
-
-            movies = new ArrayList<Movie>();
-            movies.addAll(Arrays.asList(savedMovies));
         }
     }
 
@@ -116,17 +118,11 @@ public class MovieListFragment extends Fragment {
                              Bundle savedInstanceState) {
         View fragView = inflater.inflate(R.layout.fragment_display_movie_posters, container, false);
 
-        mProgressBar = (ProgressBar) fragView.findViewById(R.id.search_progress_bar);
-
-        searchResults = (GridView) fragView.findViewById(R.id.movie_search_results);
-
-        mMovieListAdapter = new MovieSearchResultAdapter(getActivity(), R.layout.movie_grid_item, movies);
-
         bindListAdapter(fragView);
 
-        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
-            reloadMovies(fragView);
-        }
+//        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
+//            reloadMovies(fragView);
+//        }
         return fragView;
     }
 
@@ -189,9 +185,9 @@ public class MovieListFragment extends Fragment {
         super.onResume();
 
 
-        if (movies == null || movies.isEmpty() || ! currentSort.equals(sortPreference())) {
+        if (movies == null || movies.isEmpty() || currentSort == null || ! currentSort.equals(sortPreference())) {
 
-            if (! currentSort.equals(sortPreference()))
+            if (currentSort == null || ! currentSort.equals(sortPreference()))
                 bindListAdapter(getView());
 
             reloadMovies(getView());
@@ -201,12 +197,13 @@ public class MovieListFragment extends Fragment {
     }
 
     public void reloadMovies(View view) {
-        movies = new ArrayList<Movie>();
+        movies.clear();
         mProgressBar.setVisibility(View.VISIBLE);
 
 
         if (getString(R.string.sort_preference_favorites).equals(sortPreference())) {
-            mFavoritesCursorAdapter.getCursor().requery();
+           // mFavoritesCursorAdapter.getCursor().requery();
+            mFavoritesCursorAdapter.notifyDataSetChanged();
             mProgressBar.setVisibility(View.GONE);
 
             if (mFavoritesCursorAdapter.getCursor().getCount() == 0) {
@@ -234,6 +231,7 @@ public class MovieListFragment extends Fragment {
         FetchMoviesTask fpmt = new FetchMoviesTask(getActivity(), mMovieListAdapter, mProgressBar);
 
         AsyncTask<String, Void, List<Movie>> response = fpmt.execute(getString(R.string.api_key), sortPreference());
+
     }
 
     private boolean isNetworkAvailable() {
@@ -282,7 +280,7 @@ public class MovieListFragment extends Fragment {
         }
         outState.putString(CURRENT_SORT, currentSort);
         if (movies != null)
-            outState.putParcelableArray(CURRENT_MOVIES, movies.toArray(new Movie[movies.size()]));
+            outState.putParcelableArrayList(CURRENT_MOVIES, movies);
         super.onSaveInstanceState(outState);
     }
 
